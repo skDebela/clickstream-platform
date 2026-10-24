@@ -2,7 +2,26 @@
   "apiVersion": "dashboard.grafana.app/v2",
   "kind": "Dashboard",
   "metadata": {
-    "name": "adtq89s"
+    "name": "adtq89s",
+    "namespace": "default",
+    "uid": "5ae2e574-96d7-48d9-a8e2-17f35f5e2674",
+    "resourceVersion": "1792835144651015",
+    "generation": 1,
+    "creationTimestamp": "2026-10-24T09:45:44Z",
+    "labels": {
+      "grafana.app/deprecatedInternalID": "1741703713042432"
+    },
+    "annotations": {
+      "grafana.app/createdBy": "access-policy:service",
+      "grafana.app/folder": "dg26lmahudc00b",
+      "grafana.app/managedBy": "classic-file-provisioning",
+      "grafana.app/managerId": "platform",
+      "grafana.app/sourceChecksum": "7adce42f35563448daa6a5c779e8bb83",
+      "grafana.app/sourcePath": "/var/lib/grafana/dashboards/clickstream.json",
+      "grafana.app/sourceTimestamp": "1792835027000",
+      "grafana.app/folderTitle": "Platform",
+      "grafana.app/folderUrl": "/dashboards/f/dg26lmahudc00b/platform"
+    }
   },
   "spec": {
     "annotations": [
@@ -205,7 +224,7 @@
           "description": "",
           "id": 2,
           "links": [],
-          "title": "New panel",
+          "title": "Top pages",
           "vizConfig": {
             "group": "barchart",
             "kind": "VizConfig",
@@ -326,7 +345,7 @@
           "description": "",
           "id": 3,
           "links": [],
-          "title": "New panel",
+          "title": "Conversion rate",
           "vizConfig": {
             "group": "stat",
             "kind": "VizConfig",
@@ -336,6 +355,8 @@
                   "color": {
                     "mode": "thresholds"
                   },
+                  "max": 100,
+                  "min": 0,
                   "thresholds": {
                     "mode": "absolute",
                     "steps": [
