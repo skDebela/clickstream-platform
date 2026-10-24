@@ -4,9 +4,13 @@ import org.apache.spark.api.java.function.VoidFunction2;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
 import org.apache.spark.sql.SparkSession;
+import org.apache.spark.sql.streaming.StateOperatorProgress;
+import org.apache.spark.sql.streaming.StreamingQueryListener;
 import org.apache.spark.sql.streaming.Trigger;
 import org.apache.spark.sql.types.DataTypes;
 import org.apache.spark.sql.types.StructType;
+
+import java.util.Arrays;
 
 import static org.apache.spark.sql.functions.*;
 
@@ -23,12 +27,31 @@ public class ClickstreamJob {
             .add("productId", DataTypes.StringType)
             .add("timestamp", DataTypes.LongType);
 
-    public static void main(String[] args) throws Exception {
+    static void main(String[] args) throws Exception {
         var spark = SparkSession.builder()
                 .appName("clickstream")
                 .master("local[*]")
                 .config("spark.sql.shuffle.partitions", "4")
                 .getOrCreate();
+
+        spark.streams().addListener(new StreamingQueryListener() {
+            @Override
+            public void onQueryStarted(QueryStartedEvent event) {}
+
+            @Override
+            public void onQueryProgress(QueryProgressEvent event) {
+                var p = event.progress();
+                if (p.numInputRows() == 0) return;
+                var ops = p.stateOperators();
+                long droppedLate = Arrays.stream(ops).mapToLong(StateOperatorProgress::numRowsDroppedByWatermark).sum();
+                long stateRows = Arrays.stream(ops).mapToLong(StateOperatorProgress::numRowsTotal).sum();
+                System.out.printf("batch %d: input=%d droppedLate=%d stateRows=%d watermark=%s",
+                        p.batchId(), p.numInputRows(), droppedLate, stateRows, p.eventTime().get("watermark"));
+            }
+
+            @Override
+            public void onQueryTerminated(QueryTerminatedEvent event) {}
+        });
 
         Dataset<Row> events = spark.readStream()
                 .format("kafka")
