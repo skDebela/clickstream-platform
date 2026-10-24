@@ -58,6 +58,9 @@ services:
       - "3000:3000"
     environment:
       GF_PLUGINS_PREINSTALL_SYNC: grafana-clickhouse-datasource@4.23.2
+    volumes:
+      - ./grafana/provisioning:/etc/grafana/provisioning
+      - ./grafana/dashboards:/var/lib/grafana/dashboards
     depends_on:
       - clickhouse
 
