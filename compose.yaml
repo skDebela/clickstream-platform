@@ -15,6 +15,15 @@ services:
       KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
       KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1
       KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
+    volumes:
+      - kafka-data:/var/lib/kafka/data
+
+  kafka-init:
+    image: apache/kafka:4.3.1
+    depends_on:
+      - kafka
+    entrypoint: >
+      sh -c "until /opt/kafka/bin/kafka-topics.sh --bootstrap-server kafka:29092 --list >/dev/null 2>&1; do sleep 2; done; /opt/kafka/bin/kafka-topics.sh --bootstrap-server kafka:29092 --create --if-not-exists --topic clickstream --partitions 3 --replication-factor 1"
 
   kafka-ui:
     image: kafbat/kafka-ui:v1.5.0
@@ -41,6 +50,7 @@ services:
         hard: 262144
     volumes:
       - clickhouse-data:/var/lib/clickhouse
+      - ./clickhouse/init:/docker-entrypoint-initdb.d
 
   grafana:
     image: grafana/grafana:13.2.4
@@ -53,3 +63,4 @@ services:
 
 volumes:
   clickhouse-data:
+  kafka-data:
