@@ -63,8 +63,11 @@ public class ClickstreamJob {
                 .select("e.*")
                 .withColumn("event_time", expr("timestamp_millis(timestamp)"));
 
-        Dataset<Row> stats = events
+        Dataset<Row> deduped = events
                 .withWatermark("event_time", "2 minutes")
+                .dropDuplicatesWithinWatermark("eventId");
+
+        Dataset<Row> stats = deduped
                 .groupBy(window(col("event_time"), "5 minutes"), col("page"), col("type"))
                 .count()
                 .select(

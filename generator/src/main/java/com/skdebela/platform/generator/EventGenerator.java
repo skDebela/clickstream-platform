@@ -1,5 +1,6 @@
 package com.skdebela.platform.generator;
 
+import org.apache.kafka.clients.producer.Callback;
 import org.apache.kafka.clients.producer.KafkaProducer;
 import org.apache.kafka.clients.producer.ProducerConfig;
 import org.apache.kafka.clients.producer.ProducerRecord;
@@ -23,6 +24,7 @@ public class EventGenerator {
         var topic = env("KAFKA_TOPIC", "clickstream");
         var eventsPerSec = Integer.parseInt(env("EVENTS_PER_SECOND", "10"));
         var latePercent = Integer.parseInt(env("LATE_EVENTS_PERCENT", "0"));
+        var duplicatePercent = Integer.parseInt(env("DUPLICATE_EVENTS_PERCENT", "0"));
 
         Map<String, Object> config = Map.of(
                 ProducerConfig.BOOTSTRAP_SERVERS_CONFIG, bootstrap_servers,
@@ -34,6 +36,7 @@ public class EventGenerator {
 
         var mapper = JsonMapper.builder().build();
         var sent = new AtomicLong();
+        var unique = new AtomicLong();
         var failed = new AtomicLong();
         var running = new CountDownLatch(1);
         var stopped = new CountDownLatch(1);
@@ -58,23 +61,29 @@ public class EventGenerator {
                 var json = mapper.writeValueAsString(event);
 
                 // Key = userId, so each user's events land on one partition, in order.
-                producer.send(new ProducerRecord<>(topic, event.userId(), json), (metadata, exception) -> {
-                    if (exception == null) sent.incrementAndGet();
+                var record = new ProducerRecord<>(topic, event.userId(), json);
+                Callback callback = (meta, exception) -> {
+                    if (exception == null)  sent.incrementAndGet();
                     else {
                         failed.incrementAndGet();
                         System.err.println("Failed to send event: " + exception.getMessage());
                     }
-                });
+                };
+                producer.send(record, callback);
+                unique.incrementAndGet();
+                if (ThreadLocalRandom.current().nextInt(100) < duplicatePercent) {
+                    producer.send(record, callback); // save eventId: a simulated client retry
+                }
 
                 if (System.currentTimeMillis() - lastReport > 5_000) {
-                    System.out.printf("Sent=%d, Failed=%d%n%n", sent.get(), failed.get());
+                    System.out.printf("unique=%d sent=%d, Failed=%d%n%n", unique.get(), sent.get(), failed.get());
                     lastReport = System.currentTimeMillis();
                 }
                 if (running.await(pause.toNanos(), TimeUnit.NANOSECONDS)) break;
             }
             producer.flush();
         } finally {
-            System.out.printf("Stopped. Sent=%d, Failed=%d%n%n", sent.get(), failed.get());
+            System.out.printf("Stopped. Unique=%d Sent=%d, Failed=%d%n%n", unique.get(), sent.get(), failed.get());
             stopped.countDown();
         }
     }
