@@ -64,7 +64,7 @@ public class ClickstreamJob {
                 .withColumn("event_time", expr("timestamp_millis(timestamp)"));
 
         Dataset<Row> stats = events
-                .withWatermark("event_time", "2 minutes")
+                .withWatermark("event_time", "6 minutes")
                 .groupBy(window(col("event_time"), "5 minutes"), col("page"), col("type"))
                 .count()
                 .select(
